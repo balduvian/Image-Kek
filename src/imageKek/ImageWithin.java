@@ -24,8 +24,9 @@ public class ImageWithin {
 			throw new Exception("containing image is not big enough!");
 		
 		var insideIndex = 0;
-		var currentRGB = inside.getRGB(0, 0);
-		var index = 0;
+		var insideRGB = inside.getRGB(0, 0);
+		
+		var bitIndex = 0;
 		
 		for(var i = 0; i < inTotal; ++i) {
 			var x = i % width;
@@ -34,15 +35,15 @@ public class ImageWithin {
 			var rgb = main.getRGB(x, y);
 			
 			rgb &= 0xfffffffe;
-			rgb |= (currentRGB >> (bitDepth - 1 - insideIndex)) & 1;
+			rgb |= (insideRGB >> bitIndex) & 1;
 					
 			main.setRGB(x, y, rgb);
 			
-			++index;
-			if(i != inTotal - 1 && index == bitDepth) {
-				index = 0;
+			++bitIndex;
+			if(i != inTotal - 1 && bitIndex == bitDepth) {
+				bitIndex = 0;
 				++insideIndex;
-				currentRGB = inside.getRGB(insideIndex % inWidth, insideIndex / inWidth);
+				insideRGB = inside.getRGB(insideIndex % inWidth, insideIndex / inWidth);
 			}	
 		}
 		
@@ -59,22 +60,23 @@ public class ImageWithin {
 		var total = width * height * bitDepth;
 		
 		var currentRGB = 0xff000000;
-		var subIndex = 0;
-		var rgbIndex = 0;
+		var currentIndex = 0;
+		
+		var bitIndex = 0;
 		
 		for(var i = 0; i < total; ++i) {
-			var layeredRGB = layered.getRGB(i % layeredWidth, i % layeredHeight);
+			var layeredRGB = layered.getRGB(i % layeredWidth, i / layeredWidth);
 			
-			currentRGB |= ((layeredRGB & 1) << (bitDepth - 1 - subIndex));
+			currentRGB |= ((layeredRGB & 1) << bitIndex);
 			
-			++subIndex;
-			if(i != total - 1 && subIndex == bitDepth) {
+			++bitIndex;
+			if(i != total - 1 && bitIndex == bitDepth) {
 				// place this color in sheet
-				sheet.setRGB(rgbIndex % width, rgbIndex / width, currentRGB);
+				sheet.setRGB(currentIndex % width, currentIndex / width, currentRGB);
 				
 				// then reset indices
-				subIndex = 0;
-				++rgbIndex;
+				bitIndex = 0;
+				++currentIndex;
 				currentRGB = 0xff000000;
 			}
 		}
