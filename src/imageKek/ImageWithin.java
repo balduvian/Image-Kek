@@ -35,7 +35,7 @@ public class ImageWithin {
 			var rgb = main.getRGB(x, y);
 			
 			rgb &= 0xfffffffe;
-			rgb |= (insideRGB >> bitIndex) & 1;
+			rgb |= (insideRGB >> (bitDepth - bitIndex - 1)) & 1;
 					
 			main.setRGB(x, y, rgb);
 			
@@ -67,7 +67,7 @@ public class ImageWithin {
 		for(var i = 0; i < total; ++i) {
 			var layeredRGB = layered.getRGB(i % layeredWidth, i / layeredWidth);
 			
-			currentRGB |= ((layeredRGB & 1) << bitIndex);
+			currentRGB |= ((layeredRGB & 1) << (bitDepth - bitIndex - 1));
 			
 			++bitIndex;
 			if(i != total - 1 && bitIndex == bitDepth) {
