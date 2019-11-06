@@ -1,37 +1,17 @@
+package imageKek;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayList;
 
 public class EncodeBits {
-	
-	public static void main(String[] args) {
-		new EncodeBits();
-	}
-	
-	public EncodeBits() {
-		try {
-			var msg = "have you seen the video of the guy who used autopilot";
-			
-			encode("comp.png", msg.toCharArray(), 34, "bits.png");
-			
-			var message = new int[msg.length()];
-			
-			decode("bits.png", message, 34);
-			
-			for(var i = 0; i < msg.length(); ++i) {
-				System.out.print((char)message[i]);
-			}
-			
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-	
-	public void encode(String in, char[] bytes, int stride, String out) throws Exception {
-		var img = ImageIO.read(new File(in));
-		
+	public static void encode(BufferedImage img, char[] bytes, int stride) throws Exception {
 		var width = img.getWidth();
 		var height = img.getHeight();
+		
+		if(bytes.length > (width * height) / (stride * 8))
+			throw new Exception("image not large enough to write this message");
 		
 		int length = (bytes.length + 1) * 8;
 		
@@ -50,37 +30,39 @@ public class EncodeBits {
 			
 			rgb = smallBit | (rgb & 0xfffffffe);
 			
-			//System.out.println("smbt: " + smallBit);
-			//System.out.println("smb2: " + (rgb & 1));
-			
 		    img.setRGB(x, y, rgb);
 		}
-		
-		ImageIO.write(img, "png", new File(out));
 	}
 	
-	public void decode(String in, int[] writeTo, int stride) throws Exception {
-		var img = ImageIO.read(new File(in));
-		
+	public static void decode(BufferedImage img, ArrayList<Integer> writeTo, int stride) throws Exception {
 		var width = img.getWidth();
-		var height = img.getHeight();
+
+		var i = 0;
 		
-		int length = writeTo.length * 8;
-		
-		for(var i = 0; i < length; ++i) {
+		while(true) {
 			var x = (i * stride) % width;
 			var y = (i * stride) / width;
 			
 			var bigByteIndex = i / 8;
 			var smallBitIndex = 7 - (i % 8);
 			
-			var rgb = img.getRGB(x, y);
+			// if we need to add a byte
+			if(writeTo.size() == bigByteIndex)
+				writeTo.add(0);
 			
-			rgb = rgb & 1;
+			// write in the next bit
+			var writeToRGB = writeTo.get(bigByteIndex);
 			
-			//System.out.println(rgb);
+			writeToRGB |= ((img.getRGB(x, y) & 1) << smallBitIndex);
 			
-			writeTo[bigByteIndex] |= (rgb << smallBitIndex);
+			writeTo.set(bigByteIndex, writeToRGB);
+			
+			// when we hit the null terminator
+			if(smallBitIndex == 0 && writeToRGB == 0) {
+				break;
+			}
+			
+			++i;
 		}
 	}
 }

@@ -5,56 +5,12 @@ import java.io.File;
 
 import javax.imageio.ImageIO;
 
-public class JpgWind {
-
-	public static void main(String[] args) {
-		new JpgWind();
-	}
-
-	public JpgWind() {
-		try { 
-		
-			var img = ImageIO.read(new File("test2.png"));
-			var img2 = ImageIO.read(new File("hidden.jpg"));
-			
-			ImageWithin.imageWithin(img, img2);
-			
-			var hidden = ImageWithin.revealImage(img, 116, 116);
-			
-			ImageIO.write(img, "png", new File("layered.png"));
-			ImageIO.write(hidden, "png", new File("revealed.png"));
-			/*
-			img = spiral(img, true);
-			img = wind(img, true);
-			img = spiral(img, true);
-			img = wind(img, true);
-			img = spiral(img, true);
-			img = wind(img, true);
-			img = spiral(img, true);
-			img = wind(img, true);
-			
-			ImageIO.write(img, "png", new File("arranged.png"));
-			
-			img = wind(img, false);
-			img = spiral(img, false);
-			img = wind(img, false);
-			img = spiral(img, false);
-			img = wind(img, false);
-			img = spiral(img, false);
-			img = wind(img, false);
-			img = spiral(img, false);
-			
-			ImageIO.write(img, "png", new File("unarranged.png"));
-			*/
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
+public class Windings {
 	
 	private static boolean UP_RIGHT = true;
 	private static boolean DOWN_LEFT = false;
 	
-	public BufferedImage wind(BufferedImage img, boolean forward) {
+	public static BufferedImage wind(BufferedImage img, boolean forward) {
 		boolean direction = UP_RIGHT;
 		
 		var width = img.getWidth();
@@ -120,7 +76,7 @@ public class JpgWind {
 	private static final int LEFT = 2;
 	private static final int UP = 3;
 	
-	public BufferedImage spiral(BufferedImage img, boolean forward) {
+	public static BufferedImage spiral(BufferedImage img, boolean forward) {
 		var direction = 0;
 		
 		var width = img.getWidth();
