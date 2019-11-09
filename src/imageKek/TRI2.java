@@ -4,50 +4,22 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
-public class TRI2
-{
-	public static final int HEADING = 187;
+public class TRI2 {
+	private static final int HEADING = 187;
 	
-	public static void main(String[] args) {
-		new TRI2();
-	}
+	public static final int[] defaultEncoder = new int[] {
+		0, 0, 2, 3,
+		2, 0, 3, 2,
+		5, 0, 3, 2,
+		0, 3, 2, 3,
+		2, 2, 2, 4,
+		4, 2, 4, 2,
+		0, 6, 4, 2,
+		4, 4, 2, 4,
+		6, 4, 2, 4
+	};
 	
-	public TRI2() {
-		try {
-			var baseEncoder = new Encoder(new int[] {
-				0, 0, 2, 3,
-				2, 0, 3, 2,
-				5, 0, 3, 2,
-				0, 3, 2, 3,
-				2, 2, 2, 4,
-				4, 2, 4, 2,
-				0, 6, 4, 2,
-				4, 4, 2, 4,
-				6, 4, 2, 4
-			});
-			//encodeFile("moonsmooth.png", baseEncoder);
-			
-			//printPatternTable("tri.tri");
-			
-			//decodeFile("tri.tri");
-			
-			System.out.println(getPatternCount("tri.tri", 1));
-			
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-	
-	public static class Encoder {
-		int[] dims;
-		
-		public Encoder(int[]  dims) {
-			this.dims = dims;
-		}
-	}
-	
-	public void encodeFile(String path, Encoder encoder) throws Exception {
-		BufferedImage img = ImageIO.read(new File(path));
+	public static File encodeImage(BufferedImage img, int[] encoder) throws Exception {
 		var width = img.getWidth();
 		var height = img.getHeight();
 		
@@ -121,16 +93,16 @@ public class TRI2
 				
 				// the encoder sections
 				var sortPosition = 0;
-				var numSections = encoder.dims.length / 4;
+				var numSections = encoder.length / 4;
 				if(numSections > 9)
 					throw new Exception("too many sections in encoder");
 				
 				for(var s = 0; s < numSections; ++s) {
 					// get this encoder box
-					var left = encoder.dims[s * 4];
-					var top = encoder.dims[s * 4 + 1];
-					var wi = encoder.dims[s * 4 + 2];
-					var hi = encoder.dims[s * 4 + 3];
+					var left = encoder[s * 4];
+					var top = encoder[s * 4 + 1];
+					var wi = encoder[s * 4 + 2];
+					var hi = encoder[s * 4 + 3];
 					
 					var count = 0;
 					
@@ -193,7 +165,8 @@ public class TRI2
 		}
 		
 		// now start writing the file
-		var write = new FileOutputStream("tri.tri");
+		var outFile = new File("tri.tri");
+		var write = new FileOutputStream(outFile);
 		
 		// put in header
 		write.write(HEADING);
@@ -313,11 +286,11 @@ public class TRI2
 		// finish
 		write.close();
 		
-		//ImageIO.write(img, "PNG", new File("skak.png"));
+		return outFile;
 	}
 	
-	public int getPatternCount(String path, int find) throws Exception {
-		var read = new FileInputStream(path);
+	public static int getPatternCount(File file, int find) throws Exception {
+		var read = new FileInputStream(file);
 		
 		if(read.read() != HEADING)
 			throw new Exception("not a TRI file");
@@ -379,28 +352,11 @@ public class TRI2
 		return count;
 	}
 	
-	public void printPatternTable(String path) throws Exception {
-		var read = new FileInputStream(path);
+	public static BufferedImage printPatternTable(File file) throws Exception {
+		var read = new FileInputStream(file);
 		
-		read.read(); // heading
-		
-		read.read(); // T
-		read.read(); // R
-		read.read(); // I
-		
-		read.read(); // version
-		
-		read.read(); // wdith
-		read.read(); // wdith
-		read.read(); // wdith
-		read.read(); // wdith
-		
-		read.read(); // height
-		read.read(); // height
-		read.read(); // height
-		read.read(); // height
-		
-		read.read(); // color
+		// skip over heading and data we don't need
+		read.skip(14);
 		
 		var img = new BufferedImage(128, 128, BufferedImage.TYPE_BYTE_GRAY);
 		
@@ -418,20 +374,24 @@ public class TRI2
 			}
 		}
 		
-		ImageIO.write(img, "png", new File("patternTable.png"));
+		return img;
 	}
 	
-	public void decodeFile(String path) throws Exception {
-		var read = new FileInputStream(path);
+	public static BufferedImage decodeFile(File file) throws Exception {
+		var read = new FileInputStream(file);
 		
-		if(read.read() != HEADING)
+		if(read.read() != HEADING) {
+			read.close();
 			throw new Exception("not a TRI file");
+		}
 		
-		read.read(); // T
-		read.read(); // R
-		read.read(); // I
+		// read the T R I
+		read.skip(3);
 		
+		@SuppressWarnings("unused")
 		var version = read.read();
+		
+		// find the 4 byte width and height
 		
 		var width0 = read.read();
 		var width1 = read.read();
@@ -470,8 +430,6 @@ public class TRI2
 		var pWidth = width / 8;
 		var pHeight = height / 8;
 		
-		var pretty = false;
-		
 		// now read the image
 		for(var j = 0; j < pHeight; ++j) {
 			for(var i = 0; i < pWidth; ++i) {
@@ -502,63 +460,9 @@ public class TRI2
 					
 					var color1 = (0xff << 24) | (red1 << 16) | (gre1 << 8) | blu1;
 					
-					if(pretty) {
-						var chunk = new int[8][8][3];
-						for(var k = 0; k < 8; ++k) {
-							for(var l = 0; l < 8; ++l) {
-								if(patterns[l][k][pattern]) {
-									chunk[l][k][0] = red1;
-									chunk[l][k][1] = gre1;
-									chunk[l][k][2] = blu1;
-								} else {
-									chunk[l][k][0] = red0;
-									chunk[l][k][1] = gre0;
-									chunk[l][k][2] = blu0;
-								}
-							}
-						}
-						
-						for(var k = 0; k < 8; ++k) {
-							for (var l = 0; l < 8; ++l) {
-								var total = 0;
-								var avgR = 0;
-								var avgG = 0;
-								var avgB = 0;
-								if(l != 0) {
-									avgR += chunk[l - 1][k][0];
-									avgG += chunk[l - 1][k][1];
-									avgB += chunk[l - 1][k][2];
-									++total;
-								}
-								if(l != 7) {
-									avgR += chunk[l + 1][k][0];
-									avgG += chunk[l + 1][k][1];
-									avgB += chunk[l + 1][k][2];
-									++total;
-								}
-								if(k != 0) {
-									avgR += chunk[l][k - 1][0];
-									avgG += chunk[l][k - 1][1];
-									avgB += chunk[l][k - 1][2];
-									++total;
-								}
-								if(k != 7) {
-									avgR += chunk[l][k + 1][0];
-									avgG += chunk[l][k + 1][1];
-									avgB += chunk[l][k + 1][2];
-									++total;
-								}
-								
-								var avgColor = (0xff << 24) | ((avgR / total) << 16) | ((avgG / total) << 8) | (avgB / total);
-								
-								img.setRGB(i * 8 + l, j * 8 + k, avgColor);
-							}
-						}
-					} else {
-						for(var k = 0; k < 8; ++k) {
-							for(var l = 0; l < 8; ++l) {
-								img.setRGB(i * 8 + l, j * 8 + k, patterns[l][k][pattern] ? color1 : color0);
-							}
+					for(var k = 0; k < 8; ++k) {
+						for(var l = 0; l < 8; ++l) {
+							img.setRGB(i * 8 + l, j * 8 + k, patterns[l][k][pattern] ? color1 : color0);
 						}
 					}
 				}
@@ -568,7 +472,6 @@ public class TRI2
 		// finish reading
 		read.close();
 		
-		// write output image
-		ImageIO.write(img, "png", new File("decodedTRI.png"));
+		return img;
 	}
 }
