@@ -12,56 +12,108 @@ import java.util.function.IntToDoubleFunction;
 
 public class LineMaker
 {
-	public static void main(String[] args) {
-		new LineMaker();
+	public static BufferedImage encodeLines(File svg) throws Exception {
+		var lines = gatherLines(svg);
+		
+		var bounds = minMax(lines);
+		
+		var border = 5.7f;
+		var width = (int)Math.ceil(bounds[2] - bounds[0] + 2 * border);
+		var height = (int)Math.ceil(bounds[3] - bounds[1] + 2 * border);
+		
+		var img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		
+		placeLines(img, lines, bounds[0], bounds[1], border);
+		
+		return img;
 	}
 	
-	public LineMaker() {
-		try {
-			var lines = gatherLines("Asset 2.svg");
-			
-			var bounds = minMax(lines);
-			
-			var border = 5.7f;
-			var width = (int)Math.ceil(bounds[2] - bounds[0] + 2 * border);
-			var height = (int)Math.ceil(bounds[3] - bounds[1] + 2 * border);
-			
-			var img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-			
-			placeLines(img, lines, bounds[0], bounds[1], border);
-			
-			ImageIO.write(img, "png", new File("output.png"));
-			
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-	
-	BufferedImage reconstruct(BufferedImage img) {
+	public static BufferedImage reconstruct(BufferedImage img) {
 		var width = img.getWidth();
 		var height = img.getHeight();
 		
-		var output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		var sheet = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		
 		var lastPos = 0;
 		var color = 0;
 		
 		boolean found = false;
 		
-		do
-		{
+		do {
+			found = false;
+			
 			for(var i = lastPos; i < width * height; ++i) {
 				var x = i % width;
 				var y = i / width;
 				
+				if(!found) {
+					// look for our first color to grab
+					var tempColor = img.getRGB(x, y);
+					
+					// if we find our first nonwhite
+					if(tempColor != 0xffffffff) {
+						found = true;
+						lastPos = i;
+						color = tempColor;
+					}
+				} else {
+					// look for that same color again
+					if(img.getRGB(x, y) == color) {
+						// draw a connecting line
+						var x0 = lastPos % width;
+						var y0 = lastPos / width;
+						
+						var x1 = i % width;
+						var y1 = i / width;
+						
+						drawLine(sheet, x0, x1, y0, y1, color);
+						
+						// make sure we don't try and hit this color again
+						img.setRGB(x1, y1, 0xffffffff);
+						
+						// make sure we don't find the same color again
+						++lastPos;
+						
+						// goto the while loop and find the next color
+						break;
+					}
+				}
 			}
 		}
 		while (found);
 		
-		return null;
+		return sheet;
 	}
 	
-	void placeLines(BufferedImage img, Line[] lines, float left, float top, float border) {
+	private static void drawLine(BufferedImage img, int x0, int x1, int y0, int y1, int color) {
+		//put a pixel on each column if the change in x is greater than the change in y
+		if (Math.abs(x1 - x0) > Math.abs(y1 - y0)) {
+			var slope = ((float)y1 - y0) / ((float)x1 - x0);
+		
+			var sX = Math.min(x0, x1);
+			var lX = Math.max(x0, x1);
+			
+			for (var i = sX; i <= lX; ++i) {
+				var y_val = (int) Math.round(slope * (i - x0) + y0);
+				img.setRGB(i, y_val, color);
+			}
+		
+		}
+		//put a pixel on each row
+		else {
+			var slope = ((float) x1 - x0) / ((float) y1 - y0);
+			
+			var sY = Math.min(y0, y1);
+			var lY = Math.max(y0, y1);
+			
+			for (var j = sY; j <= lY; ++j) {
+				var x_val = (int) Math.round(slope * (j - y0) + x0);
+				img.setRGB(x_val, j, color);
+			}
+		}
+	}
+	
+	private static void placeLines(BufferedImage img, Line[] lines, float left, float top, float border) {
 		var amount = lines.length;
 		
 		var width = img.getWidth();
@@ -95,7 +147,6 @@ public class LineMaker
 				}
 			}
 			
-			System.out.println(color);
 			img.setRGB(x, y, color);
 			
 			//do the same for line ending coordinate
@@ -117,7 +168,7 @@ public class LineMaker
 		}
 	}
 	
-	float[] minMax(Line[] lines) {
+	private static float[] minMax(Line[] lines) {
 		var minX = Float.MAX_VALUE;
 		var minY = Float.MAX_VALUE;
 		var maxX = Float.MIN_VALUE;
@@ -145,36 +196,36 @@ public class LineMaker
 		return new float[] {minX,minY,maxX,maxY};
 	}
 	
-	static class Line {
+	private static class Line {
 		interface PutIn {
 			void put(float v);
 		}
 		
-		float x0, y0, x1, y1;
+		public float x0, y0, x1, y1;
 		
-		PutIn[] putters = {
+		public PutIn[] putters = {
 			(v) -> x0 = v,
 			(v) -> y0 = v,
 			(v) -> x1 = v,
 			(v) -> y1 = v
 		};
 		
-		void print() {
+		public void print() {
 			System.out.println("line<" + x0 + ", " + y0 + " " + x1 + ", " + y1 + ">");
 		}
 	}
 	
-	static final String lineName = "line";
-	static final String[] valueNames = {
+	private static final String lineName = "line";
+	private static final String[] valueNames = {
 		"x1", "y1", "x2", "y2"
 	};
 	
-	Line[] gatherLines(String path) throws Exception {
+	private static Line[] gatherLines(File svg) throws Exception {
 		// we don't know how many lines we'll need
 		var lineList = new ArrayList<Line>();
 		
 		// we read the svg at path
-		var reader = new FileReader(new File(path));
+		var reader = new FileReader(svg);
 		
 		// how far into a value we are looking for
 		int lookingCounter = 0;

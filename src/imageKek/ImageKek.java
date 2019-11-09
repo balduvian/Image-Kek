@@ -16,7 +16,8 @@ public class ImageKek {
 			//windingRoutine();
 			//rotationsRoutine();
 			//encodeBitsRoutine("yallready know");
-			shredRoutine();
+			//shredRoutine();
+			linesRoutine();
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -71,9 +72,8 @@ public class ImageKek {
 		
 		EncodeBits.decode(img, message, 34);
 		
-		for(var i = 0; i < msg.length(); ++i) {
+		for(var i = 0; i < msg.length(); ++i)
 			System.out.print((char)(int)message.get(i));
-		}
 	}
 	
 	private void shredRoutine() throws Exception {
@@ -86,5 +86,17 @@ public class ImageKek {
 		DoubleShred.unShred(img);
 		
 		ImageIO.write(img, "png", new File("process/unshredded.png"));
+	}
+	
+	private void linesRoutine() throws Exception {
+		var svg = new File("img/test4.svg");
+		
+		var img = LineMaker.encodeLines(svg);
+		
+		ImageIO.write(img, "png", new File("process/dots.png"));
+		
+		img = LineMaker.reconstruct(img);
+		
+		ImageIO.write(img, "png", new File("process/lines.png"));
 	}
 }
