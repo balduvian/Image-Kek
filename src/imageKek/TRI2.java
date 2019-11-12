@@ -19,7 +19,7 @@ public class TRI2 {
 		6, 4, 2, 4
 	};
 	
-	public static File encodeImage(BufferedImage img, int[] encoder) throws Exception {
+	public static File encodeImage(BufferedImage img, int[] encoder, File outFile) throws Exception {
 		var width = img.getWidth();
 		var height = img.getHeight();
 		
@@ -165,7 +165,6 @@ public class TRI2 {
 		}
 		
 		// now start writing the file
-		var outFile = new File("tri.tri");
 		var write = new FileOutputStream(outFile);
 		
 		// put in header
